@@ -453,6 +453,28 @@ void topOverlay()
      }
 #endif
 
+#if defined(SPARK_AMP) && defined(BLE)
+    {
+      extern bool sparkConnected;
+      top.setFreeFont(&FreeSans9pt7b);
+      top.setTextDatum(MC_DATUM);
+      {
+        int16_t tw = top.textWidth("SPARK");
+        int16_t bw = tw + 8;
+        int16_t bx = 124;
+        int16_t cx = bx + bw / 2;
+        if (sparkConnected) {
+          top.fillRoundRect(bx, 1, bw, 22, 4, TFT_INDEX_DARKGREEN);
+          top.setTextColor(TFT_INDEX_WHITE, TFT_INDEX_DARKGREEN);
+        } else {
+          top.fillRoundRect(bx, 1, bw, 22, 4, TFT_INDEX_BLACK);
+          top.setTextColor(TFT_INDEX_DARKGREY, TFT_INDEX_BLACK);
+        }
+        top.drawString("SPARK", cx, 11);
+      }
+    }
+#endif
+
 #ifdef BATTERY
     top.drawRoundRect(display.width() - 50, 1, 44, 20, 4, TFT_INDEX_WHITE);
     top.fillRoundRect(display.width() - 6, 7, 4, 8, 2, TFT_INDEX_WHITE);
@@ -580,6 +602,10 @@ void topOverlay()
 void bottomOverlay()
 {
   // Last 24 lines of display
+
+#if defined(SPARK_AMP) && defined(BLE)
+  if (banknames[currentBank][0] == '@') return;
+#endif
 
   if (lastUsed == lastUsedPedal && lastUsed != 0xFF && millis() < endMillis2 && lastPedalName[0] != ':') {
     int p;
@@ -1134,6 +1160,140 @@ void drawFrame1(int16_t x, int16_t y)
         sprite.deleteSprite();
       }
       else {
+#if defined(SPARK_AMP) && defined(BLE)
+        if (banknames[currentBank][0] == '@') {
+          extern bool     sparkHasPreset;
+          extern char     sparkCurrentPresetName[33];
+          extern uint8_t  sparkCurrentHWPreset;
+          extern char     sparkHWPresetNames[4][33];
+          extern bool     sparkHWPresetNameKnown[4];
+          extern uint8_t  sparkCurrentBank;
+          extern uint8_t  sparkCurrentSlot;
+          extern char     sparkCustomSlotNames[4][33];
+
+          display.fillRect(0, TOP_HEIGHT, display.width(), TOP_BLANK, TFT_INDEX_BLACK);
+          TFT_eSprite sprite = TFT_eSprite(&display);
+          sprite.setColorDepth(1);
+          sprite.createSprite(display.width(), display.height() - TOP_HEIGHT - TOP_BLANK);
+          sprite.setBitmapColor(TFT_WHITE, TFT_BLACK);
+          sprite.fillRect(0, 0, sprite.width(), sprite.height(), TFT_BLACK);
+
+          // Layout: [top bar 24px][sep][name area][sep][bottom bar 24px]
+          const int barH   = BOTTOM_HEIGHT;
+          const int sepTop = barH;
+          const int sepBot = sprite.height() - barH;
+          const int nameMid = (sepTop + sepBot) / 2;
+
+          // Center: current preset name
+          sprite.setFreeFont(&FreeSans18pt7b);
+          sprite.setTextDatum(MC_DATUM);
+          sprite.drawString(sparkHasPreset ? String(sparkCurrentPresetName) : String("--"),
+                            sprite.width() / 2, nameMid);
+
+          // Separator lines (horizontal between rows and name, vertical between slots)
+          sprite.drawLine(0, sepTop, sprite.width(), sepTop, TFT_DARKGREY);
+          sprite.drawLine(0, sepBot, sprite.width(), sepBot, TFT_DARKGREY);
+          for (int i = 1; i < 4; i++) {
+            int x = i * sprite.width() / 4;
+            sprite.drawLine(x, 0,      x, sepTop, TFT_DARKGREY); // top row dividers
+            sprite.drawLine(x, sepBot, x, sprite.height(), TFT_DARKGREY); // bottom row dividers
+          }
+
+          // Collect HW preset actions (top row) and custom preset actions (bottom row)
+          {
+            struct SparkSlotEntry { uint8_t midiCode; uint8_t sparkBank; };
+            SparkSlotEntry hwSlots[4],  custSlots[4];
+            int            nHW = 0,     nCust = 0;
+
+            int banks_to_scan[2] = { currentBank, 0 };
+            for (int bi = 0; bi < 2; bi++) {
+              int b = banks_to_scan[bi];
+              if (bi == 1 && b == currentBank) continue;
+              action* a = actions[b];
+              while (a) {
+                if (a->midiMessage == PED_ACTION_SPARK_HW_PRESET && nHW < 4) {
+                  bool dup = false;
+                  for (int j = 0; j < nHW; j++) if (hwSlots[j].midiCode == a->midiCode) { dup = true; break; }
+                  if (!dup) hwSlots[nHW++] = { a->midiCode, 0 };
+                } else if (a->midiMessage == PED_ACTION_SPARK_PRESET && nCust < 4) {
+                  uint8_t bk = a->midiChannel == 0 ? sparkCurrentBank : a->midiChannel - 1;
+                  bool dup = false;
+                  for (int j = 0; j < nCust; j++) if (custSlots[j].midiCode == a->midiCode && custSlots[j].sparkBank == bk) { dup = true; break; }
+                  if (!dup) custSlots[nCust++] = { a->midiCode, bk };
+                }
+                a = a->next;
+              }
+            }
+
+            // HW presets: ascending (slot 0 left = footswitch 1 bottom-left)
+            for (int i = 1; i < nHW; i++) {
+              SparkSlotEntry k = hwSlots[i]; int j = i-1;
+              while (j >= 0 && hwSlots[j].midiCode > k.midiCode)
+                { hwSlots[j+1] = hwSlots[j]; j--; }
+              hwSlots[j+1] = k;
+            }
+            // Custom presets: descending (slot 0 right = footswitch 5 top-right)
+            for (int i = 1; i < nCust; i++) {
+              SparkSlotEntry k = custSlots[i]; int j = i-1;
+              while (j >= 0 && custSlots[j].midiCode < k.midiCode)
+                { custSlots[j+1] = custSlots[j]; j--; }
+              custSlots[j+1] = k;
+            }
+
+            // Custom presets: top row (switches 5-8); HW presets: bottom row (switches 1-4)
+            SparkSlotEntry* topRow = custSlots;
+            int             nTop   = nCust;
+            bool            topHW  = false;
+            SparkSlotEntry* botRow = hwSlots;
+            int             nBot   = nHW;
+            bool            botHW  = true;
+
+            sprite.setFreeFont(&FreeSans9pt7b);
+            int slotW    = sprite.width() / 4;
+            int maxTextW = slotW - 6;
+
+            auto fitName = [&](const char* src) -> String {
+              String s = src;
+              while (s.length() > 0 && (int)sprite.textWidth(s) > maxTextW) s.remove(s.length() - 1);
+              return s;
+            };
+
+            for (int row = 0; row < 2; row++) {
+              SparkSlotEntry* slots = row == 0 ? topRow : botRow;
+              int             nS    = row == 0 ? nTop   : nBot;
+              bool            isHW  = row == 0 ? topHW  : botHW;
+              int             y     = row == 0 ? barH / 2 : sepBot + barH / 2;
+              for (int i = 0; i < 4; i++) {
+                const char* name = "---";
+                bool active = false;
+                char hwPlaceholder[5];
+                if (i < nS) {
+                  if (isHW) {
+                    if (sparkHWPresetNameKnown[slots[i].midiCode]) {
+                      name = sparkHWPresetNames[slots[i].midiCode];
+                    } else {
+                      snprintf(hwPlaceholder, sizeof(hwPlaceholder), "HW%d", slots[i].midiCode + 1);
+                      name = hwPlaceholder;
+                    }
+                    active = (sparkCurrentHWPreset == slots[i].midiCode);
+                  } else {
+                    name   = sparkCustomSlotNames[slots[i].midiCode][0] ? sparkCustomSlotNames[slots[i].midiCode] : "---";
+                    active = (sparkCurrentHWPreset == 0xFF && sparkCurrentBank == slots[i].sparkBank
+                              && sparkCurrentSlot == slots[i].midiCode);
+                  }
+                }
+                sprite.setTextDatum(ML_DATUM);
+                sprite.setTextColor(active ? TFT_WHITE : TFT_DARKGREY, TFT_BLACK);
+                sprite.drawString(fitName(name), i * slotW + 3, y);
+              }
+            }
+          }
+
+          sprite.pushSprite(0, TOP_HEIGHT + TOP_BLANK);
+          sprite.deleteSprite();
+          return;
+        }
+#endif
         //const byte pedals2 = PEDALS / 2;
         String name;
         int offsetText       = 0;

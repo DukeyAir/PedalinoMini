@@ -12,6 +12,10 @@ __________           .___      .__  .__                 _____  .__       .__    
 #include <algorithm>
 #include <list>
 
+#if defined(SPARK_AMP) && defined(BLE)
+#include "SparkControl.h"
+#endif
+
 struct event {
   unsigned long timestamp;
   byte          pedal;
@@ -1415,6 +1419,35 @@ void fire_action(action* act, byte p, byte i, byte e)
               esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_D(p), 0);
               esp_deep_sleep_start();
               break;
+
+#if defined(SPARK_AMP) && defined(BLE)
+            case PED_ACTION_SPARK_PRESET:
+              // midiChannel: bank 1-based (0 = use current), midiCode: slot 0-3
+              spark_queue_preset(act->midiChannel > 0 ? act->midiChannel - 1 : sparkCurrentBank,
+                                 act->midiCode);
+              leds_update(e, act);
+              break;
+
+            case PED_ACTION_SPARK_EFFECT_TOGGLE:
+              // oscAddress holds the effect name; toggles based on known amp state
+              spark_queue_toggle_effect(act->oscAddress,
+                                        !spark_get_effect_state(act->oscAddress));
+              leds_update(e, act);
+              break;
+
+            case PED_ACTION_SPARK_HW_PRESET:
+              // midiCode: HW preset 0-3
+              spark_queue_hw_preset(act->midiCode);
+              leds_update(e, act);
+              break;
+
+            case PED_ACTION_SPARK_EFFECT_PARAM:
+              // oscAddress=effect name, midiChannel=param index, expression pedal value 0-127
+              spark_queue_effect_param(act->oscAddress, act->midiChannel,
+                                       (float)currentMIDIValue[currentBank][p][i] / 127.f);
+              break;
+#endif // SPARK_AMP && BLE
+
           }
 
           switch (act->midiMessage) {
@@ -1427,6 +1460,12 @@ void fire_action(action* act, byte p, byte i, byte e)
             case PED_ACTION_DEVICE_INFO:
             case PED_ACTION_POWER_ON_OFF:
             case PED_SEQUENCE:
+#if defined(SPARK_AMP) && defined(BLE)
+            case PED_ACTION_SPARK_PRESET:
+            case PED_ACTION_SPARK_EFFECT_TOGGLE:
+            case PED_ACTION_SPARK_HW_PRESET:
+            case PED_ACTION_SPARK_EFFECT_PARAM:
+#endif
             case PED_SEQUENCE_STEP_BY_STEP_FWD:
             case PED_SEQUENCE_STEP_BY_STEP_REV:
               break;

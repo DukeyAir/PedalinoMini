@@ -227,6 +227,16 @@ using namespace ace_button;
 #define PED_ACTION_SCAN               98
 #define PED_ACTION_POWER_ON_OFF       99
 
+// Spark amp actions (midiMessage values 60-65)
+// PED_ACTION_SPARK_PRESET:        midiChannel=bank(1-based, 0=current), midiCode=slot(0-3)
+// PED_ACTION_SPARK_HW_PRESET:     midiCode=HW preset(0-3)
+// PED_ACTION_SPARK_EFFECT_TOGGLE: oscAddress=effect name
+// PED_ACTION_SPARK_EFFECT_PARAM:  oscAddress=effect name, midiChannel=paramIdx, value from expression pedal
+#define PED_ACTION_SPARK_PRESET        60
+#define PED_ACTION_SPARK_EFFECT_TOGGLE 63
+#define PED_ACTION_SPARK_HW_PRESET     64
+#define PED_ACTION_SPARK_EFFECT_PARAM  65
+
 #define PED_NONE                  1
 #define PED_MOMENTARY1            2
 #define PED_LATCH1                3
@@ -527,6 +537,9 @@ bool  wifiEnabled             = false;
 bool  bleEnabled              = true;
 #else
 bool  bleEnabled              = false;
+#endif
+#if defined(SPARK_AMP) && defined(BLE)
+bool  sparkEnabled            = false;   // persisted; enables Spark BLE client at boot
 #endif
 bool  wifiConnected           = false;
 bool  bleConnected            = false;

@@ -109,7 +109,7 @@ bool get_top_page(int p, unsigned int start, unsigned int len) {
   page = "";
 
   page += F("<!doctype html>");
-  page += F("<html lang='en'>");
+  page += F("<html lang='en' data-bs-theme='dark'>");
   page += F("<head>");
   page += F("<title>PedalinoMini&trade;</title>");
   page += F("<meta charset='utf-8'>");
@@ -135,7 +135,7 @@ bool get_top_page(int p, unsigned int start, unsigned int len) {
   if (p >= 0) {
   page += F("<div class='container-fluid mt-3 mb-3'>");
 
-  page += F("<nav class='navbar navbar-expand-md navbar-light bg-light mb-3'>");
+  page += F("<nav class='navbar navbar-expand-md navbar-dark bg-dark mb-3'>");
   page += F("<div class='container-fluid'>");
   page += F("<a class='navbar-brand' href='/'>");
   page += F("<img src='/logo.png' width='30' height='30' class='d-inline-block align-top' alt=''></a>");
@@ -233,13 +233,29 @@ bool get_top_page(int p, unsigned int start, unsigned int len) {
   page += F("</svg>");
   page += F(" Configurations</a>");
   page += F("</li>");
+
+#if defined(SPARK_AMP) && defined(BLE)
+  if (sparkEnabled) {
+  if (trim_page(start, len)) return true;
+
+  page += F("<li class='nav-item");
+  page += (p == 9 ? F(" active'>") : F("'>"));
+  page += F("<a class='nav-link' href='/spark'>");
+  page += F("<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-lightning-charge' viewBox='0 0 16 16'>");
+  page += F("<path d='M11.251.068a.5.5 0 0 1 .227.58L9.677 6.5H13a.5.5 0 0 1 .364.843l-8 8.5a.5.5 0 0 1-.842-.49L6.323 9.5H3a.5.5 0 0 1-.364-.843l8-8.5a.5.5 0 0 1 .615-.09zM4.157 8.5H7a.5.5 0 0 1 .478.647L6.044 13.6 11.843 7.5H9a.5.5 0 0 1-.478-.647L9.956 2.4 4.157 8.5z'/>");
+  page += F("</svg>");
+  page += F(" Spark Amp</a>");
+  page += F("</li>");
+  } // sparkEnabled
+#endif
+
   page += F("</ul>");
   }
   page += F("</div>");
 
   if (trim_page(start, len)) return true;
 
-  if (p != -1 && p != 0 && p != 7)
+  if (p != -1 && p != 0 && p != 7 && p != 9)
   {
     page += F("<form class='d-flex'>");
     page += F("<div class='btn-group'>");
@@ -402,7 +418,7 @@ void get_login_page() {
   page += F("</label>");
   page += F("</div>");
   page += F("<button class='btn btn-lg btn-primary btn-block' type='submit'>Sign in</button>");
-  page += F("<p class='mt-5 mb-3 text-muted text-center'>© 2018-2019</p>");
+  page += F("<p class='mt-5 mb-3 text-muted text-center'>� 2018-2019</p>");
   page += F("</form>");
   page += F("</div>");
 
@@ -1681,6 +1697,28 @@ void get_actions_page(unsigned int start, unsigned int len) {
     page += F("'");
     if (act->midiMessage == PED_ACTION_POWER_ON_OFF) page += F(" selected");
     page += F(">Power On/Off</option>");
+#if defined(SPARK_AMP) && defined(BLE)
+    page += F("<option value='");
+    page += PED_ACTION_SPARK_PRESET;
+    page += F("'");
+    if (act->midiMessage == PED_ACTION_SPARK_PRESET) page += F(" selected");
+    page += F(">Spark Preset</option>");
+    page += F("<option value='");
+    page += PED_ACTION_SPARK_HW_PRESET;
+    page += F("'");
+    if (act->midiMessage == PED_ACTION_SPARK_HW_PRESET) page += F(" selected");
+    page += F(">Spark HW Preset</option>");
+    page += F("<option value='");
+    page += PED_ACTION_SPARK_EFFECT_TOGGLE;
+    page += F("'");
+    if (act->midiMessage == PED_ACTION_SPARK_EFFECT_TOGGLE) page += F(" selected");
+    page += F(">Spark Effect Toggle</option>");
+    page += F("<option value='");
+    page += PED_ACTION_SPARK_EFFECT_PARAM;
+    page += F("'");
+    if (act->midiMessage == PED_ACTION_SPARK_EFFECT_PARAM) page += F(" selected");
+    page += F(">Spark Effect Param</option>");
+#endif
     page += F("</select>");
     page += F("<label for='sendSelect");
     page += i;
@@ -2052,6 +2090,8 @@ void get_actions_page(unsigned int start, unsigned int len) {
   page += F("   document.getElementById('channelDiv'    + i).removeAttribute('hidden');"
             "   document.getElementById('sequenceDiv'   + i).setAttribute('hidden', 'hidden');"
             "   document.getElementById('codeLabel'     + i).textContent = 'Code';"
+            "   document.getElementById('channelLabel'    + i).textContent = 'Channel';"
+            "   document.getElementById('oscAddressLabel' + i).textContent = 'OSC Address';"
             "   document.getElementById('fromLabel'     + i).textContent = 'From Value';"
             "   document.getElementById('toLabel'       + i).textContent = 'To Value';"
             "   document.getElementById('tagOffLabel'   + i).textContent = 'Tag 1';"
@@ -2320,6 +2360,69 @@ void get_actions_page(unsigned int start, unsigned int len) {
             "       document.getElementById('codeInput'     + i).disabled = true;"
             "       document.getElementById('tagOffInput'   + i).disabled = true;"
             "       document.getElementById('tagOnInput'    + i).disabled = true;"
+            "       document.getElementById('slotSelect'    + i).disabled = true;"
+            "       break;");
+
+  if (trim_page(start, len)) return;
+
+  page += F("     case 'Spark HW Preset':"
+            "       document.getElementById('codeLabel'     + i).textContent = 'HW Preset (0-3)';"
+            "       document.getElementById('channelDiv'    + i).setAttribute('hidden', 'hidden');"
+            "       document.getElementById('fromInput'     + i).disabled = true;"
+            "       document.getElementById('toInput'       + i).disabled = true;"
+            "       document.getElementById('tagOffInput'   + i).disabled = true;"
+            "       document.getElementById('tagOnInput'    + i).disabled = true;"
+            "       document.getElementById('color0Input'   + i).disabled = true;"
+            "       document.getElementById('color1Input'   + i).disabled = true;"
+            "       document.getElementById('slotSelect'    + i).disabled = true;"
+            "       break;"
+            "     case 'Spark Preset':"
+            "       document.getElementById('codeLabel'     + i).textContent = 'Slot (0-3)';"
+            "       document.getElementById('channelLabel'  + i).textContent = 'Bank (0=current)';"
+            "       document.getElementById('fromInput'     + i).disabled = true;"
+            "       document.getElementById('toInput'       + i).disabled = true;"
+            "       document.getElementById('tagOffInput'   + i).disabled = true;"
+            "       document.getElementById('tagOnInput'    + i).disabled = true;"
+            "       document.getElementById('color0Input'   + i).disabled = true;"
+            "       document.getElementById('color1Input'   + i).disabled = true;"
+            "       document.getElementById('slotSelect'    + i).disabled = true;"
+            "       break;"
+            "     case 'Spark Bank+':"
+            "     case 'Spark Bank-':"
+            "       document.getElementById('channelDiv'    + i).setAttribute('hidden', 'hidden');"
+            "       document.getElementById('codeInput'     + i).disabled = true;"
+            "       document.getElementById('fromInput'     + i).disabled = true;"
+            "       document.getElementById('toInput'       + i).disabled = true;"
+            "       document.getElementById('tagOffInput'   + i).disabled = true;"
+            "       document.getElementById('tagOnInput'    + i).disabled = true;"
+            "       document.getElementById('color0Input'   + i).disabled = true;"
+            "       document.getElementById('color1Input'   + i).disabled = true;"
+            "       document.getElementById('slotSelect'    + i).disabled = true;"
+            "       break;"
+            "     case 'Spark Effect Toggle':"
+            "       document.getElementById('oscAddressLabel' + i).textContent = 'Effect Name';"
+            "       document.getElementById('oscAddress'    + i).disabled = false;"
+            "       document.getElementById('channelDiv'    + i).setAttribute('hidden', 'hidden');"
+            "       document.getElementById('codeInput'     + i).disabled = true;"
+            "       document.getElementById('fromInput'     + i).disabled = true;"
+            "       document.getElementById('toInput'       + i).disabled = true;"
+            "       document.getElementById('tagOffInput'   + i).disabled = true;"
+            "       document.getElementById('tagOnInput'    + i).disabled = true;"
+            "       document.getElementById('color0Input'   + i).disabled = true;"
+            "       document.getElementById('color1Input'   + i).disabled = true;"
+            "       document.getElementById('slotSelect'    + i).disabled = true;"
+            "       break;"
+            "     case 'Spark Effect Param':"
+            "       document.getElementById('oscAddressLabel' + i).textContent = 'Effect Name';"
+            "       document.getElementById('channelLabel'  + i).textContent = 'Param Index (0-9)';"
+            "       document.getElementById('oscAddress'    + i).disabled = false;"
+            "       document.getElementById('codeInput'     + i).disabled = true;"
+            "       document.getElementById('fromInput'     + i).disabled = true;"
+            "       document.getElementById('toInput'       + i).disabled = true;"
+            "       document.getElementById('tagOffInput'   + i).disabled = true;"
+            "       document.getElementById('tagOnInput'    + i).disabled = true;"
+            "       document.getElementById('color0Input'   + i).disabled = true;"
+            "       document.getElementById('color1Input'   + i).disabled = true;"
             "       document.getElementById('slotSelect'    + i).disabled = true;"
             "       break;");
 
@@ -4336,6 +4439,17 @@ void get_options_page(unsigned int start, unsigned int len) {
   page += F("<small id='repeatOnBankSwitchModeHelpBlock' class='form-text text-muted'>");
   page += F("On bank switch repeat the last MIDI message that was sent for that bank");
   page += F("</small>");
+#if defined(SPARK_AMP) && defined(BLE)
+  page += F("<div class='form-check form-switch'>");
+  page += F("<input class='form-check-input' type='checkbox' id='sparkEnabled' name='sparkenabled'");
+  if (sparkEnabled) page += F(" checked");
+  page += F(">");
+  page += F("<label class='form-check-label' for='sparkEnabled'>Spark Amp BLE</label>");
+  page += F("</div>");
+  page += F("<small id='sparkEnabledHelpBlock' class='form-text text-muted'>");
+  page += F("Connect to a Positive Grid Spark amp via BLE at boot. Requires restart.");
+  page += F("</small>");
+#endif
   page += F("</div>");
   page += F("</div>");
   page += F("</div>");
@@ -4995,7 +5109,7 @@ void get_update_page(unsigned int start, unsigned int len) {
   page += F("<div class='row'>");
   page += F("<div class='col-8'>");
   page += F("<small id='installHelpBlock' class='form-text text-muted'>");
-  page += F("<a target='_blank' href='https://alf45tar.github.io/PedalinoMini/installer'>PedalinoMini™ Installer</a>");
+  page += F("<a target='_blank' href='https://alf45tar.github.io/PedalinoMini/installer'>PedalinoMini� Installer</a>");
   page += F("</small>");
   page += F("</div>");
   page += F("<div class='col-1'>");
@@ -5010,7 +5124,7 @@ void get_update_page(unsigned int start, unsigned int len) {
 
   page += F("<div class='card' style='display: none;' id='progressCard'>");
   page += F("<h5 class='card-header'>");
-  page += F("<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' fill=ìcurrentColor' class='bi bi-hourglass-split' viewBox='0 0 20 20'>");
+  page += F("<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' fill=�currentColor' class='bi bi-hourglass-split' viewBox='0 0 20 20'>");
   page += F("<path d='M2.5 15a.5.5 0 1 1 0-1h1v-1a4.5 4.5 0 0 1 2.557-4.06c.29-.139.443-.377.443-.59v-.7c0-.213-.154-.451-.443-.59A4.5 4.5 0 0 1 3.5 3V2h-1a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-1v1a4.5 4.5 0 0 1-2.557 4.06c-.29.139-.443.377-.443.59v.7c0 .213.154.451.443.59A4.5 4.5 0 0 1 12.5 13v1h1a.5.5 0 0 1 0 1h-11zm2-13v1c0 .537.12 1.045.337 1.5h6.326c.216-.455.337-.963.337-1.5V2h-7zm3 6.35c0 .701-.478 1.236-1.011 1.492A3.5 3.5 0 0 0 4.5 13s.866-1.299 3-1.48V8.35zm1 0v3.17c2.134.181 3 1.48 3 1.48a3.5 3.5 0 0 0-1.989-3.158C8.978 9.586 8.5 9.052 8.5 8.351z'/>");
   page += F("</svg>");
   page += F(" Progress</h5>");
@@ -6087,6 +6201,14 @@ void http_handle_post_options(AsyncWebServerRequest *request) {
     //eeprom_update_repeat_on_bank_switch(repeatOnBankSwitch);
   }
 
+#if defined(SPARK_AMP) && defined(BLE)
+  bool newSparkEnabled = (request->arg("sparkenabled") == checked);
+  if (newSparkEnabled != sparkEnabled) {
+    sparkEnabled = newSparkEnabled;
+    eeprom_update_spark_enabled(sparkEnabled);
+  }
+#endif
+
   bool newLadder = false;
   for (byte i = 0; i < LADDER_STEPS; i++) {
     String a = request->arg(String("threshold") + String(i+1));
@@ -6624,8 +6746,98 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
 }
 #endif  // NO_WEBSOCKET
 
+#if defined(SPARK_AMP) && defined(BLE)
+void get_spark_page(unsigned int start, unsigned int len) {
+  if (get_top_page(9, start, len)) return;
+
+  page += F("<div class='card mb-3'><div class='card-body'>");
+  page += F("<h5 class='card-title'>Connection</h5>");
+  page += F("<p id='statusText'>Loading...</p>");
+  page += F("<button class='btn btn-primary btn-sm' onclick='doConnect()'>Connect</button>");
+  page += F("</div></div>");
+
+  if (trim_page(start, len)) return;
+
+  page += F("<div class='card mb-3'><div class='card-body'>");
+  page += F("<h5 class='card-title'>Upload Preset</h5>");
+  page += F("<input type='file' class='form-control mb-2' id='presetFile' accept='.json'>");
+  page += F("<button class='btn btn-success btn-sm' onclick='doUpload()'>Upload</button>");
+  page += F("</div></div>");
+
+  page += F("<div class='card mb-3'><div class='card-body'>");
+  page += F("<h5 class='card-title'>Presets</h5>");
+  page += F("<div id='presetList'>Loading...</div>");
+  page += F("</div></div>");
+
+  if (trim_page(start, len)) return;
+
+  page += F("<div class='card mb-3'><div class='card-body'>");
+  page += F("<h5 class='card-title'>Bank Assignments</h5>");
+  page += F("<div id='bankEditor'>Loading...</div>");
+  page += F("<button class='btn btn-primary btn-sm mt-2' onclick='saveBanks()'>Save Banks</button>");
+  page += F("</div></div>");
+
+  if (trim_page(start, len)) return;
+
+  page += F("<script>let presets=[],banks=[],banksLoaded=false;");
+  page += F("async function refresh(reloadBanks){try{");
+  page += F("let r1=await fetch('/spark/status');if(!r1.ok)throw new Error('status '+r1.status);let s=await r1.json();");
+  page += F("document.getElementById('statusText').innerHTML=s.connected");
+  page += F("?`<b>${s.ampName}</b> &mdash; Serial: ${s.serial} &mdash; FW: ${s.firmware}<br>Bank: ${s.bank+1} &nbsp; Preset: ${s.preset||'&mdash;'}`");
+  page += F(":(s.scanning?'Scanning...':'Disconnected');");
+  page += F("let r2=await fetch('/spark/presets');if(!r2.ok)throw new Error('presets '+r2.status);presets=await r2.json();");
+  page += F("let pl=document.getElementById('presetList');");
+  page += F("pl.innerHTML=presets.length?presets.map(p=>`<div class='d-flex justify-content-between align-items-center mb-1'><span>${p}</span><button class='btn btn-danger btn-sm' onclick='delPreset(\"${p}\")'>Delete</button></div>`).join(''):'<em>No presets uploaded yet.</em>';");
+  page += F("if(reloadBanks||!banksLoaded){");
+  page += F("let r3=await fetch('/spark/banks');if(!r3.ok)throw new Error('banks '+r3.status);banks=await r3.json();");
+  page += F("banksLoaded=true;renderBanks();}");
+  page += F("}catch(e){document.getElementById('statusText').textContent='Error: '+e.message;}}");
+  page += F("function renderBanks(){let h='<table class=\"table table-sm\"><thead><tr><th>Bank</th><th>Slot 1</th><th>Slot 2</th><th>Slot 3</th><th>Slot 4</th></tr></thead><tbody>';");
+  page += F("for(let b=0;b<banks.length;b++){h+=`<tr><td>${b+1}</td>`;for(let s=0;s<4;s++){");
+  page += F("h+='<td><select class=\"form-select form-select-sm\" id=\"b'+b+'_s'+s+'\">';h+='<option value=\"\">&mdash;</option>';");
+  page += F("presets.forEach(p=>{let sel=banks[b][s]===p?' selected':'';h+=`<option value=\"${p}\"${sel}>${p}</option>`;});h+='</select></td>';}h+='</tr>';}");
+  page += F("h+='</tbody></table>';document.getElementById('bankEditor').innerHTML=h;}");
+  page += F("async function saveBanks(){");
+  page += F("let b=banks.map((_,bi)=>Array.from({length:4},(_,si)=>document.getElementById('b'+bi+'_s'+si).value||null));");
+  page += F("let r=await fetch('/spark/banks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});");
+  page += F("if(r.ok){banks=b;alert('Banks saved.');}else{alert('Save failed: '+r.status);}}");
+  page += F("async function doUpload(){let f=document.getElementById('presetFile').files[0];if(!f){alert('Select a file first.');return;}");
+  page += F("try{let fd=new FormData();fd.append('file',f,f.name);");
+  page += F("let r=await fetch('/spark/upload',{method:'POST',body:fd});");
+  page += F("if(r.ok){alert('Uploaded: '+f.name);refresh(true);}else{let t=await r.text();alert('Upload failed: '+t);}}");
+  page += F("catch(e){alert('Upload error: '+e.message);}}");
+  page += F("async function delPreset(n){if(!confirm('Delete '+n+'?'))return;await fetch('/spark/preset?name='+encodeURIComponent(n),{method:'DELETE'});refresh(true);}");
+  page += F("async function doConnect(){await fetch('/spark/connect',{method:'POST'});setTimeout(()=>refresh(false),1000);}");
+  page += F("refresh(true);setInterval(()=>refresh(false),5000);</script>");
+
+  if (trim_page(start, len)) return;
+
+  get_footer_page();
+
+  if (trim_page(start, len, true)) return;
+}
+
+size_t get_spark_page_chunked(uint8_t *buffer, size_t maxLen, size_t index) {
+  page = "";
+  get_spark_page(index, maxLen - 1);
+  page.getBytes(buffer, maxLen, 0);
+  buffer[maxLen-1] = 0;
+  size_t byteWritten = strlen((const char *)buffer);
+  if (byteWritten == 0) {
+    page = "";
+    alert = "";
+    alertError = "";
+    fullPageCompleted = true;
+  }
+  return byteWritten;
+}
+#endif // SPARK_AMP && BLE
+
+#include "SparkWebHandlers.h"
+
 
 void http_setup() {
+
 
 #ifdef WEBCONFIG
 #ifdef WEBSOCKET
@@ -6676,6 +6888,23 @@ void http_setup() {
   httpServer.on("/progress",        HTTP_GET,   http_handle_progress);
 
   httpServer.onNotFound(http_handle_not_found);
+
+#if defined(SPARK_AMP) && defined(BLE)
+  // -- Spark amp routes ------------------------------------------------------
+  // Sub-routes must be registered before "/spark" — ESPAsyncWebServer uses prefix matching
+  httpServer.on("/spark/status",  HTTP_GET,    http_handle_spark_status);
+  httpServer.on("/spark/presets", HTTP_GET,    http_handle_spark_presets);
+  httpServer.on("/spark/banks",   HTTP_GET,    http_handle_spark_banks);
+  httpServer.on("/spark/banks",   HTTP_POST,   http_handle_post_spark_banks, nullptr, http_body_spark_banks);
+  httpServer.on("/spark/preset",  HTTP_DELETE, http_handle_delete_spark_preset);
+  httpServer.on("/spark/connect", HTTP_POST,   http_handle_post_spark_connect);
+  httpServer.on("/spark/upload",  HTTP_POST,
+    [](AsyncWebServerRequest* req) {
+      req->send(_uploadOk ? 200 : 400, "text/plain", _uploadOk ? "OK" : "Invalid preset JSON");
+    },
+    http_handle_spark_upload);
+  httpServer.on("/spark",         HTTP_GET,    http_handle_spark);
+#endif // SPARK_AMP && BLE
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   httpServer.begin();

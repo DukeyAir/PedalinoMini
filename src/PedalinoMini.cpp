@@ -66,6 +66,9 @@ __________           .___      .__  .__                 _____  .__       .__    
 #include "OTAUpdateArduino.h"
 #include "WifiConnect.h"
 #include "WebConfigAsync.h"
+#if defined(SPARK_AMP) && defined(BLE)
+#include "SparkControl.h"
+#endif
 
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
@@ -433,7 +436,16 @@ void setup()
     DPRINT("Bluetooth Classic disabled: %ld bytes released\n", after - before);
   }
   else {
-    // Release Bluetooth memory
+#if defined(SPARK_AMP)
+    // SPARK_AMP needs BLE as client — only release Classic BT, keep BLE alive
+    long before = ESP.getFreeHeap();
+    esp_bt_controller_disable();
+    esp_bt_controller_deinit();
+    esp_bt_mem_release(ESP_BT_MODE_CLASSIC_BT);
+    long after = ESP.getFreeHeap();
+    DPRINT("Bluetooth Classic disabled (Spark BLE kept): %ld bytes released\n", after - before);
+#else
+    // Release ALL Bluetooth memory
     long before = ESP.getFreeHeap();
     esp_bluedroid_disable();
     esp_bluedroid_deinit();
@@ -442,6 +454,7 @@ void setup()
     esp_bt_mem_release(ESP_BT_MODE_BTDM);
     long after = ESP.getFreeHeap();
     DPRINT("Bluetooth disabled: %ld bytes released\n", after - before);
+#endif
   }
 #endif
 
@@ -502,6 +515,14 @@ void setup()
 #else
     DPRINT("BLE MIDI service advertising started (server mode)\n");
 #endif
+  }
+#endif
+
+#if defined(SPARK_AMP) && defined(BLE)
+  if (sparkEnabled) {
+    // BLE MIDI already initialized NimBLE above; Spark client reuses the same stack.
+    if (!NimBLEDevice::getInitialized()) NimBLEDevice::init(host.c_str());
+    spark_task_start();
   }
 #endif
 

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command ' *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/stangreg/Ignitron/main/src/SparkStreamReader.cpp\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/stangreg/Ignitron/main/src/SparkBTControl.cpp\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/stangreg/Ignitron/main/src/SparkHelper.cpp\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/stangreg/Ignitron/main/src/SparkBTControl.h\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/stangreg/Ignitron/main/src/SparkMessage.h\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/stangreg/Ignitron/main/src/SparkTypes.h\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/stangreg/Ignitron/main/src/SparkDataControl.h\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/stangreg/Ignitron/main/src/SparkMessage.cpp\")",
+      "Bash(gh api *)",
+      "WebSearch"
+    ]
+  }
+}

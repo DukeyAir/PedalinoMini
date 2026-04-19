@@ -1386,6 +1386,23 @@ void eeprom_update_repeat_on_bank_switch(bool enable = false)
 #endif
 }
 
+#if defined(SPARK_AMP) && defined(BLE)
+void eeprom_update_spark_enabled(bool enable = false)
+{
+#ifdef NVS
+  DPRINT("Updating NVS ... ");
+  preferences.begin("Global", false);
+  preferences.putBool("Spark Enabled", enable);
+  preferences.end();
+  DPRINT("done\n");
+  DPRINT("[NVS][Global][Spark Enabled]: %d\n", enable);
+#else
+  sparkEnabled = enable;
+  spiffs_save_globals();
+#endif
+}
+#endif
+
 void eeprom_update_press_time(long p1 = DEBOUNCE_INTERVAL,
                               long p2 = PED_SIMULTANEOUS_GAP,
                               long p3 = PED_PRESS_TIME,
@@ -1657,6 +1674,9 @@ void eeprom_read_global()
     oscRemoteHost       = preferences.getString("OSCRemoteHost");
     oscRemotePort       = preferences.getUInt("OSCRemotePort");
     preferences.getBytes("Ladder", ladderLevels, sizeof(ladderLevels));
+#if defined(SPARK_AMP) && defined(BLE)
+    sparkEnabled        = preferences.getBool("Spark Enabled", false);
+#endif
     preferences.end();
     DPRINT("done\n");
     DPRINT("[NVS][Global][Device Name]:      %s\n", host.c_str());
@@ -1674,6 +1694,9 @@ void eeprom_read_global()
     DPRINT("[NVS][Global][Screen Timeout]:   %d\n", screenSaverTimeout);
     DPRINT("[NVS][Global][Tap Dance Mode]:   %d\n", tapDanceMode);
     DPRINT("[NVS][Global][Bank Switch]:      %d\n", repeatOnBankSwitch);
+#if defined(SPARK_AMP) && defined(BLE)
+    DPRINT("[NVS][Global][Spark Enabled]:    %d\n", sparkEnabled);
+#endif
     DPRINT("[NVS][Global][Debounce Time]:    %ld\n", debounceInterval);
     DPRINT("[NVS][Global][SimultaneousGap]:  %ld\n", simultaneousGapTime);
     DPRINT("[NVS][Global][Single Time]:      %ld\n", pressTime);
@@ -1803,6 +1826,9 @@ void eeprom_update_globals()
   eeprom_update_encoder_sensitivity(encoderSensitivity);
   eeprom_update_leds_brightness(ledsOnBrightness, ledsOffBrightness);
   eeprom_update_osc_parameters(oscLocalPort, oscRemoteHost, oscRemotePort);
+#if defined(SPARK_AMP) && defined(BLE)
+  eeprom_update_spark_enabled(sparkEnabled);
+#endif
 #else
   spiffs_save_globals();
 #endif
