@@ -3,3 +3,7 @@
 .piolibdeps
 .vscode
 .DS_Store
+.claude/
+ignitron-repo/
+tools/presets/
+tools/.venv/

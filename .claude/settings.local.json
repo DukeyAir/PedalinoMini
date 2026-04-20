@@ -14,7 +14,11 @@
       "Bash(curl -s \"https://raw.githubusercontent.com/stangreg/Ignitron/main/src/SparkDataControl.h\")",
       "Bash(curl -s \"https://raw.githubusercontent.com/stangreg/Ignitron/main/src/SparkMessage.cpp\")",
       "Bash(gh api *)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:api.github.com)",
+      "Bash(python -c \"import bless; print\\('bless ok'\\)\")",
+      "Bash(python -m venv tools/.venv)",
+      "Bash(python -m pip install PyBluez)"
     ]
   }
 }
